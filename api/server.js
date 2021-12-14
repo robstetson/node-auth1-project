@@ -3,6 +3,9 @@ const helmet = require("helmet");
 const cors = require("cors");
 const userRouter = require('./users/users-router')
 const authRouter = require('./auth/auth-router')
+const session = require('express-session')
+const Store = require('connect-session-knex')(session)
+const knex = require('../data/db-config')
 /**
   Do what needs to be done to support sessions with the `express-session` package!
   To respect users' privacy, do NOT send them a cookie unless they log in.
@@ -17,6 +20,27 @@ const authRouter = require('./auth/auth-router')
  */
 
 const server = express();
+server.use(session({
+  name: "chocolatechip",
+  secret: 'shh',
+  saveUninitialized: false,
+  resave: false,
+  store: new Store({
+    knex,
+    createtable: true,
+    clearInterval: 1000 * 60 * 10,
+    tablename:'sessions',
+    sidfieldname: 'sid'
+  }),
+  cookie:{
+    maxAge: 1000 * 60 * 10,
+    secure: true,
+    httpOnly: true,
+    // sameSite: 'none' <-- this can be used to only be able to use your site on https rather then http
+  }
+}))
+
+
 
 server.use(helmet());
 server.use(express.json());
@@ -27,6 +51,11 @@ server.use('/api/auth', authRouter)
 server.get("/", (req, res) => {
   res.json({ api: "up" });
 });
+
+
+
+
+
 
 server.use((err, req, res, next) => { // eslint-disable-line
   res.status(err.status || 500).json({
